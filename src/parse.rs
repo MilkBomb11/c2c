@@ -1,0 +1,180 @@
+use crate::{
+    ast::{NameTypePair, Span, Type},
+    display_wrapper::DisplayWrapper,
+    error::Error,
+    token::{Token, TokenType},
+    translate::translate_and_clean_ntp,
+};
+
+pub struct Parser {
+    tokens: Vec<Token>,
+    pos: usize,
+}
+
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Self {
+        Self { tokens, pos: 0 }
+    }
+    fn peek(&self) -> &Token {
+        &self.tokens[self.pos]
+    }
+
+    fn advance(&mut self) -> &Token {
+        let old_pos = self.pos;
+
+        if self.pos + 1 < self.tokens.len() {
+            self.pos += 1;
+        }
+
+        &self.tokens[old_pos]
+    }
+
+    fn peek_prev(&self) -> &Token {
+        &self.tokens[self.pos - 1]
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.peek().type_ == TokenType::Eof
+    }
+
+    fn do_match(&mut self, t: &[TokenType]) -> bool {
+        for t in t.iter() {
+            if &self.peek().type_ == t {
+                self.advance();
+                return true;
+            }
+        }
+        false
+    }
+
+    fn eat(&mut self, t: &[TokenType]) -> Result<(), Error> {
+        for t in t.iter() {
+            if &self.peek().type_ == t {
+                self.advance();
+                return Ok(());
+            }
+        }
+        let loc = self.peek().start_index;
+        Err(Error {
+            loc,
+            msg: format!("Expected {:?} but got {:?}.", t, self.peek().type_),
+        })
+    }
+
+    fn backtrack(&mut self) {
+        self.pos -= 1;
+    }
+
+    fn parse_type(&mut self, text: &str) -> Result<Box<Type>, Error> {
+        match self.advance().type_ {
+            TokenType::Identifier => {
+                let start = self.peek_prev().start_index;
+                let end = self.peek_prev().end_index;
+                match &text[start..end] {
+                    "ptr" => {
+                        self.eat(&[TokenType::OneChar('<')])?;
+                        let inner = self.parse_type(text)?;
+                        self.eat(&[TokenType::OneChar('>')])?;
+                        Ok(Box::new(Type::Ptr(inner)))
+                    }
+                    "const" => {
+                        self.eat(&[TokenType::OneChar('<')])?;
+                        let inner = self.parse_type(text)?;
+                        self.eat(&[TokenType::OneChar('>')])?;
+                        Ok(Box::new(Type::Const(inner)))
+                    }
+                    "static" => {
+                        self.eat(&[TokenType::OneChar('<')])?;
+                        let inner = self.parse_type(text)?;
+                        self.eat(&[TokenType::OneChar('>')])?;
+                        Ok(Box::new(Type::Static(inner)))
+                    }
+                    "struct" => {
+                        self.eat(&[TokenType::Identifier])?;
+                        let start = self.peek_prev().start_index;
+                        let end = self.peek_prev().end_index;
+                        let name = Span::new(start, end);
+                        Ok(Box::new(Type::Struct(name)))
+                    }
+                    "arr" => {
+                        self.eat(&[TokenType::OneChar('<')])?;
+                        let elem = self.parse_type(text)?;
+                        self.eat(&[TokenType::OneChar(',')])?;
+                        self.eat(&[TokenType::Number, TokenType::Identifier])?;
+                        let start = self.peek_prev().start_index;
+                        let end = self.peek_prev().end_index;
+                        let size = Span::new(start, end);
+                        self.eat(&[TokenType::OneChar('>')])?;
+                        Ok(Box::new(Type::Arr { elem, size }))
+                    }
+                    "fn" => {
+                        let args: Vec<NameTypePair> = self.parse_args(text)?;
+                        self.eat(&[TokenType::Arrow])?;
+                        let ret: Box<Type> = self.parse_type(text)?;
+                        Ok(Box::new(Type::Func { args, ret }))
+                    }
+                    _ => {
+                        let name: Span = Span::new(start, end);
+                        Ok(Box::new(Type::Atom(name)))
+                    }
+                }
+            }
+            _ => Err(Error {
+                loc: self.peek_prev().start_index,
+                msg: format!("{:?} is not a valid type marker.", self.peek_prev().type_),
+            }),
+        }
+    }
+
+    fn parse_ntp(&mut self, text: &str) -> Result<NameTypePair, Error> {
+        self.eat(&[TokenType::Identifier])?;
+        let start = self.peek_prev().start_index;
+        let end = self.peek_prev().end_index;
+        let name = Span::new(start, end);
+        self.eat(&[TokenType::OneChar(':')])?;
+        let type_ = self.parse_type(text)?;
+        return Ok(NameTypePair { name, type_ });
+    }
+
+    fn parse_args(&mut self, text: &str) -> Result<Vec<NameTypePair>, Error> {
+        self.eat(&[TokenType::OneChar('(')])?;
+        let mut args: Vec<NameTypePair> = Vec::new();
+        if self.do_match(&[TokenType::OneChar(')')]) {
+            return Ok(args);
+        }
+        loop {
+            let ntp = self.parse_ntp(text)?;
+            args.push(ntp);
+            if self.do_match(&[TokenType::OneChar(')')]) {
+                break;
+            }
+            self.eat(&[TokenType::OneChar(',')])?;
+        }
+        Ok(args)
+    }
+
+    pub fn parse(&mut self, text: &str) -> Result<(), Error> {
+        while !self.is_at_end() {
+            self.advance();
+            if self.peek_prev().type_ == TokenType::PairOpen {
+                self.eat(&[TokenType::Identifier])?;
+                if self.peek().type_ == TokenType::OneChar(':') {
+                    self.backtrack();
+                    let ntp = self.parse_ntp(text)?;
+                    let wrapper: DisplayWrapper<&NameTypePair> = DisplayWrapper::new(text, &ntp);
+                    let name = &text[ntp.name.start..ntp.name.end];
+                    let s = translate_and_clean_ntp(name, ntp.type_.as_ref(), text);
+                    println!("{}", wrapper);
+                    println!("{}", s);
+                } else {
+                    self.backtrack();
+                    let typ = self.parse_type(text)?;
+                    let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, typ.as_ref());
+                    println!("{}", wrapper);
+                }
+                self.eat(&[TokenType::PairClose])?;
+            }
+        }
+        Ok(())
+    }
+}
