@@ -7,7 +7,7 @@ typedef struct E {
 } E;
 // this is a comment
 
-typedef [< ptr<fn (x: int, y: ptr<uint8>) -> ptr<ptr<void>>> >] hello
+typedef [< ptr<fn (int, y: ptr<uint8>) -> ptr<ptr<void>>> >] hello
 
 [< x: ptr<ptr< arr<int, 4>>> >]
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 
 [<f: ptr <fn (val: const<ptr<char>>) -> ptr<const<char>> >>];
 
-[<add: fn (x: struct hello, y: Int64, update: ptr<fn (hello: ptr<int>) -> const <static<ptr< size_t >>> > ) -> ptr<struct T>>]
+[<add: fn (struct hello, Int64, update: ptr<fn (hello: ptr<int>) -> const <static<ptr< size_t >>> > ) -> ptr<struct T>>]
 {
 	
 } /* **comment at middle ***/

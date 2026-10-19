@@ -1,6 +1,5 @@
 use crate::{
-    ast::{NameTypePair, Span, Type},
-    display_wrapper::ToDisplayWrapper,
+    ast::{NTPOrType, NameTypePair, Span, Type},
     error::Error,
     repo::Repo,
     token::{Token, TokenType},
@@ -109,7 +108,7 @@ impl Parser {
                         Ok(Box::new(Type::Arr { elem, size }))
                     }
                     "fn" => {
-                        let args: Vec<NameTypePair> = self.parse_args(text)?;
+                        let args: Vec<NTPOrType> = self.parse_args(text)?;
                         self.eat(&[TokenType::Arrow])?;
                         let ret: Box<Type> = self.parse_type(text)?;
                         Ok(Box::new(Type::Func { args, ret }))
@@ -137,21 +136,35 @@ impl Parser {
         return Ok(NameTypePair { name, type_ });
     }
 
-    fn parse_args(&mut self, text: &str) -> Result<Vec<NameTypePair>, Error> {
+    fn parse_args(&mut self, text: &str) -> Result<Vec<NTPOrType>, Error> {
         self.eat(&[TokenType::OneChar('(')])?;
-        let mut args: Vec<NameTypePair> = Vec::new();
+        let mut args: Vec<NTPOrType> = Vec::new();
         if self.do_match(&[TokenType::OneChar(')')]) {
             return Ok(args);
         }
         loop {
-            let ntp = self.parse_ntp(text)?;
-            args.push(ntp);
+            let ntp_or_type = self.parse_ntp_or_type(text)?;
+            args.push(ntp_or_type);
             if self.do_match(&[TokenType::OneChar(')')]) {
                 break;
             }
             self.eat(&[TokenType::OneChar(',')])?;
         }
         Ok(args)
+    }
+
+    pub fn parse_ntp_or_type(&mut self, text: &str) -> Result<NTPOrType, Error> {
+        self.eat(&[TokenType::Identifier])?;
+        let ntp_or_type = if self.peek().type_ == TokenType::OneChar(':') {
+            self.backtrack();
+            let ntp = self.parse_ntp(text)?;
+            NTPOrType::NTP(ntp)
+        } else {
+            self.backtrack();
+            let typ = self.parse_type(text)?;
+            NTPOrType::Type(typ)
+        };
+        Ok(ntp_or_type)
     }
 
     pub fn parse(&mut self, text: &str) -> Result<(Repo<Span>, Repo<String>), Error> {
@@ -161,21 +174,15 @@ impl Parser {
             self.advance();
             if self.peek_prev().type_ == TokenType::PairOpen {
                 let start_index = self.peek_prev().start_index;
-                self.eat(&[TokenType::Identifier])?;
-                if self.peek().type_ == TokenType::OneChar(':') {
-                    self.backtrack();
-                    let ntp = self.parse_ntp(text)?;
-                    let name = &text[ntp.name.start..ntp.name.end];
-                    let s = translate_and_clean_ntp(name, ntp.type_.as_ref(), text);
-                    replace_src_repo.push(s);
-                    println!("{}", ntp.with_text(text));
-                } else {
-                    self.backtrack();
-                    let typ = self.parse_type(text)?;
-                    let s = translate_and_clean_type(typ.as_ref(), text);
-                    replace_src_repo.push(s);
-                    println!("{}", typ.with_text(text));
-                }
+                let ntp_or_type = self.parse_ntp_or_type(text)?;
+                let s = match &ntp_or_type {
+                    NTPOrType::NTP(ntp) => {
+                        let name = &text[ntp.name.start..ntp.name.end];
+                        translate_and_clean_ntp(name, ntp.type_.as_ref(), text)
+                    }
+                    NTPOrType::Type(typ) => translate_and_clean_type(typ, text),
+                };
+                replace_src_repo.push(s);
                 self.eat(&[TokenType::PairClose])?;
                 let end_index = self.peek_prev().end_index;
                 let span = Span::new(start_index, end_index);

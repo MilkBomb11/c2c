@@ -22,10 +22,9 @@ impl<'a> Display for Printer<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut it = self.text.char_indices().peekable();
         let mut replace_srcs_it = self.replace_srcs.data.iter();
-        let mut replace_dests_it = self.replace_dests.data.iter();
+        let mut replace_dests_it = self.replace_dests.data.iter().peekable();
         while let Some((byte_index, ch)) = it.next() {
-            let start_index = replace_dests_it.next();
-            let start_index = match start_index {
+            let start_index = match replace_dests_it.peek() {
                 Some(span) => span.start,
                 None => {
                     write!(f, "{}", ch)?;

@@ -12,7 +12,7 @@ pub enum Type {
         size: Span,
     },
     Func {
-        args: Vec<NameTypePair>,
+        args: Vec<NTPOrType>,
         ret: Box<Type>,
     },
 }
@@ -30,11 +30,11 @@ impl DisplayWithText for Type {
             }
             Self::Func { args, ret } => {
                 write!(f, "(")?;
-                for (i, ntp) in args.iter().enumerate() {
+                for (i, ntp_or_type) in args.iter().enumerate() {
                     if i != 0 {
                         write!(f, ", ")?;
                     }
-                    write!(f, "{}", ntp.with_text(text))?;
+                    write!(f, "{}", ntp_or_type.with_text(text))?;
                 }
                 write!(f, ") -> {}", ret.with_text(text))
             }
@@ -74,5 +74,20 @@ impl Span {
 impl DisplayWithText for Span {
     fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result {
         write!(f, "{}", &text[self.start..self.end])
+    }
+}
+
+#[derive(Debug)]
+pub enum NTPOrType {
+    NTP(NameTypePair),
+    Type(Box<Type>),
+}
+
+impl DisplayWithText for NTPOrType {
+    fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result {
+        match self {
+            Self::NTP(ntp) => ntp.fmt_with_text(f, text),
+            Self::Type(type_) => type_.fmt_with_text(f, text),
+        }
     }
 }

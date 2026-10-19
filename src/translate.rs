@@ -1,8 +1,4 @@
-use crate::ast::{Span, Type};
-/***
-x: int -> int x
-
-***/
+use crate::ast::{NTPOrType, Span, Type};
 
 fn span_as_str<'a>(span: &Span, text: &'a str) -> &'a str {
     let start = span.start;
@@ -59,10 +55,13 @@ fn translate_ntp(name: &str, type_: &Type, text: &str) -> String {
         Type::Func { args, ret } => {
             let args: Vec<String> = args
                 .iter()
-                .map(|ntp| {
-                    let name = span_as_str(&ntp.name, text);
-                    let type_ = ntp.type_.as_ref();
-                    remove_injections(translate_ntp(name, type_, text))
+                .map(|ntp_or_type| match ntp_or_type {
+                    NTPOrType::NTP(ntp) => {
+                        let name = span_as_str(&ntp.name, text);
+                        let type_ = ntp.type_.as_ref();
+                        translate_and_clean_ntp(name, type_, text)
+                    }
+                    NTPOrType::Type(typ) => translate_and_clean_type(typ.as_ref(), text),
                 })
                 .collect();
             let args = format!("({})", args.join(", "));
@@ -96,10 +95,13 @@ fn translate_type(type_: &Type, text: &str) -> String {
         Type::Func { args, ret } => {
             let args: Vec<String> = args
                 .iter()
-                .map(|ntp| {
-                    let name = span_as_str(&ntp.name, text);
-                    let type_ = ntp.type_.as_ref();
-                    remove_injections(translate_ntp(name, type_, text))
+                .map(|ntp_or_type| match ntp_or_type {
+                    NTPOrType::NTP(ntp) => {
+                        let name = span_as_str(&ntp.name, text);
+                        let type_ = ntp.type_.as_ref();
+                        translate_and_clean_ntp(name, type_, text)
+                    }
+                    NTPOrType::Type(typ) => translate_and_clean_type(typ.as_ref(), text),
                 })
                 .collect();
             let args = format!("({})", args.join(", "));
