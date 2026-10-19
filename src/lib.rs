@@ -2,6 +2,8 @@ pub mod ast;
 pub mod display_wrapper;
 pub mod error;
 pub mod parse;
+pub mod print;
+pub mod repo;
 pub mod token;
 pub mod tokenize;
 pub mod translate;

@@ -1,4 +1,4 @@
-use crate::display_wrapper::{DisplayWithText, DisplayWrapper};
+use crate::display_wrapper::{DisplayWithText, ToDisplayWrapper};
 
 #[derive(Debug)]
 pub enum Type {
@@ -20,30 +20,13 @@ pub enum Type {
 impl DisplayWithText for Type {
     fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result {
         match self {
-            Self::Atom(span) => {
-                let wrapper: DisplayWrapper<&Span> = DisplayWrapper::new(text, span);
-                write!(f, "{}", wrapper)
-            }
-            Self::Struct(span) => {
-                let wrapper: DisplayWrapper<&Span> = DisplayWrapper::new(text, span);
-                write!(f, "struct<{}>", wrapper)
-            }
-            Self::Ptr(t) => {
-                let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, t.as_ref());
-                write!(f, "ptr<{}>", wrapper)
-            }
-            Self::Const(t) => {
-                let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, t.as_ref());
-                write!(f, "const<{}>", wrapper)
-            }
-            Self::Static(t) => {
-                let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, t.as_ref());
-                write!(f, "static<{}>", wrapper)
-            }
+            Self::Atom(span) => write!(f, "{}", span.with_text(text)),
+            Self::Struct(span) => write!(f, "struct<{}>", span.with_text(text)),
+            Self::Ptr(t) => write!(f, "ptr<{}>", t.with_text(text)),
+            Self::Const(t) => write!(f, "const<{}>", t.with_text(text)),
+            Self::Static(t) => write!(f, "static<{}>", t.with_text(text)),
             Self::Arr { elem, size } => {
-                let wrapper_elem: DisplayWrapper<&Type> = DisplayWrapper::new(text, elem.as_ref());
-                let wrapper_size: DisplayWrapper<&Span> = DisplayWrapper::new(text, size);
-                write!(f, "arr<{}, {}>", wrapper_elem, wrapper_size)
+                write!(f, "arr<{}, {}>", elem.with_text(text), size.with_text(text))
             }
             Self::Func { args, ret } => {
                 write!(f, "(")?;
@@ -51,11 +34,9 @@ impl DisplayWithText for Type {
                     if i != 0 {
                         write!(f, ", ")?;
                     }
-                    let wrapper: DisplayWrapper<&NameTypePair> = DisplayWrapper::new(text, ntp);
-                    write!(f, "{}", wrapper)?;
+                    write!(f, "{}", ntp.with_text(text))?;
                 }
-                let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, ret.as_ref());
-                write!(f, ") -> {}", wrapper)
+                write!(f, ") -> {}", ret.with_text(text))
             }
         }
     }
@@ -69,13 +50,16 @@ pub struct NameTypePair {
 
 impl DisplayWithText for NameTypePair {
     fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result {
-        let wrapper_name = DisplayWrapper::new(text, &self.name);
-        let wrapper_type = DisplayWrapper::new(text, self.type_.as_ref());
-        write!(f, "{}: {}", wrapper_name, wrapper_type)
+        write!(
+            f,
+            "{}: {}",
+            self.name.with_text(text),
+            self.type_.with_text(text)
+        )
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Span {
     pub start: usize,
     pub end: usize,

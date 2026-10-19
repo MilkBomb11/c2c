@@ -7,6 +7,10 @@ typedef struct E {
 } E;
 // this is a comment
 
+typedef [< ptr<fn (x: int, y: ptr<uint8>) -> ptr<ptr<void>>> >] hello
+
+[< x: ptr<ptr< arr<int, 4>>> >]
+
 int main(int argc, char* argv[]) {
     printf("Hello world!\n");
     E* e = (E*) malloc(sizeof(E));

@@ -4,6 +4,10 @@ pub trait DisplayWithText {
     fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result;
 }
 
+pub trait ToDisplayWrapper {
+    fn with_text<'a>(&'a self, text: &'a str) -> DisplayWrapper<'a, &'a Self>;
+}
+
 pub struct DisplayWrapper<'a, I> {
     text: &'a str,
     item: I,
@@ -21,6 +25,15 @@ where
 {
     fn fmt_with_text(&self, f: &mut std::fmt::Formatter<'_>, text: &str) -> std::fmt::Result {
         (*self).fmt_with_text(f, text)
+    }
+}
+
+impl<T> ToDisplayWrapper for T
+where
+    T: DisplayWithText,
+{
+    fn with_text<'a>(&'a self, text: &'a str) -> DisplayWrapper<'a, &'a Self> {
+        DisplayWrapper::new(text, self)
     }
 }
 

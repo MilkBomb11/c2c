@@ -1,9 +1,10 @@
 use crate::{
     ast::{NameTypePair, Span, Type},
-    display_wrapper::DisplayWrapper,
+    display_wrapper::ToDisplayWrapper,
     error::Error,
+    repo::Repo,
     token::{Token, TokenType},
-    translate::translate_and_clean_ntp,
+    translate::{translate_and_clean_ntp, translate_and_clean_type},
 };
 
 pub struct Parser {
@@ -153,28 +154,34 @@ impl Parser {
         Ok(args)
     }
 
-    pub fn parse(&mut self, text: &str) -> Result<(), Error> {
+    pub fn parse(&mut self, text: &str) -> Result<(Repo<Span>, Repo<String>), Error> {
+        let mut replace_dest_repo: Repo<Span> = Repo::new();
+        let mut replace_src_repo: Repo<String> = Repo::new();
         while !self.is_at_end() {
             self.advance();
             if self.peek_prev().type_ == TokenType::PairOpen {
+                let start_index = self.peek_prev().start_index;
                 self.eat(&[TokenType::Identifier])?;
                 if self.peek().type_ == TokenType::OneChar(':') {
                     self.backtrack();
                     let ntp = self.parse_ntp(text)?;
-                    let wrapper: DisplayWrapper<&NameTypePair> = DisplayWrapper::new(text, &ntp);
                     let name = &text[ntp.name.start..ntp.name.end];
                     let s = translate_and_clean_ntp(name, ntp.type_.as_ref(), text);
-                    println!("{}", wrapper);
-                    println!("{}", s);
+                    replace_src_repo.push(s);
+                    println!("{}", ntp.with_text(text));
                 } else {
                     self.backtrack();
                     let typ = self.parse_type(text)?;
-                    let wrapper: DisplayWrapper<&Type> = DisplayWrapper::new(text, typ.as_ref());
-                    println!("{}", wrapper);
+                    let s = translate_and_clean_type(typ.as_ref(), text);
+                    replace_src_repo.push(s);
+                    println!("{}", typ.with_text(text));
                 }
                 self.eat(&[TokenType::PairClose])?;
+                let end_index = self.peek_prev().end_index;
+                let span = Span::new(start_index, end_index);
+                replace_dest_repo.push(span);
             }
         }
-        Ok(())
+        Ok((replace_dest_repo, replace_src_repo))
     }
 }

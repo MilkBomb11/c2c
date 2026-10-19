@@ -74,3 +74,40 @@ fn translate_ntp(name: &str, type_: &Type, text: &str) -> String {
 pub fn translate_and_clean_ntp(name: &str, type_: &Type, text: &str) -> String {
     remove_injections(translate_ntp(name, type_, text))
 }
+
+fn translate_type(type_: &Type, text: &str) -> String {
+    match type_ {
+        Type::Atom(typ) => format!("{} ^$", span_as_str(typ, text)),
+        Type::Struct(inner) => format!("struct {} ^$", span_as_str(inner, text)),
+        Type::Static(inner) => format!("static {}", translate_type(inner.as_ref(), text)),
+        Type::Const(inner) => format!("const {}", translate_type(inner.as_ref(), text)),
+        Type::Arr { elem, size } => {
+            let elem = translate_type(elem, text);
+            let size = span_as_str(size, text);
+            format!("{}", add_brackets(elem, size))
+        }
+        Type::Ptr(inner) => {
+            let s = translate_type(inner.as_ref(), text);
+            match inner.as_ref() {
+                Type::Arr { .. } | Type::Func { .. } => add_star_paren(s),
+                _ => add_star(s),
+            }
+        }
+        Type::Func { args, ret } => {
+            let args: Vec<String> = args
+                .iter()
+                .map(|ntp| {
+                    let name = span_as_str(&ntp.name, text);
+                    let type_ = ntp.type_.as_ref();
+                    remove_injections(translate_ntp(name, type_, text))
+                })
+                .collect();
+            let args = format!("({})", args.join(", "));
+            format!("{}{}", translate_type(ret.as_ref(), text), args)
+        }
+    }
+}
+
+pub fn translate_and_clean_type(type_: &Type, text: &str) -> String {
+    remove_injections(translate_type(type_, text))
+}
