@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod cli;
 pub mod display_wrapper;
 pub mod error;
 pub mod parse;
