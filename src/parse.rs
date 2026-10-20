@@ -1,6 +1,6 @@
 use crate::{
     ast::{NTPOrType, NameTypePair, Span, Type},
-    error::Error,
+    error::ParseError,
     repo::Repo,
     token::{Token, TokenType},
     translate::{translate_and_clean_ntp, translate_and_clean_type},
@@ -47,7 +47,7 @@ impl Parser {
         false
     }
 
-    fn eat(&mut self, t: &[TokenType]) -> Result<(), Error> {
+    fn eat(&mut self, t: &[TokenType]) -> Result<(), ParseError> {
         for t in t.iter() {
             if &self.peek().type_ == t {
                 self.advance();
@@ -55,7 +55,7 @@ impl Parser {
             }
         }
         let loc = self.peek().start_index;
-        Err(Error {
+        Err(ParseError {
             loc,
             msg: format!("Expected {:?} but got {:?}.", t, self.peek().type_),
         })
@@ -65,7 +65,7 @@ impl Parser {
         self.pos -= 1;
     }
 
-    fn parse_type(&mut self, text: &str) -> Result<Box<Type>, Error> {
+    fn parse_type(&mut self, text: &str) -> Result<Box<Type>, ParseError> {
         match self.advance().type_ {
             TokenType::Identifier => {
                 let start = self.peek_prev().start_index;
@@ -119,14 +119,14 @@ impl Parser {
                     }
                 }
             }
-            _ => Err(Error {
+            _ => Err(ParseError {
                 loc: self.peek_prev().start_index,
                 msg: format!("{:?} is not a valid type marker.", self.peek_prev().type_),
             }),
         }
     }
 
-    fn parse_ntp(&mut self, text: &str) -> Result<NameTypePair, Error> {
+    fn parse_ntp(&mut self, text: &str) -> Result<NameTypePair, ParseError> {
         self.eat(&[TokenType::Identifier])?;
         let start = self.peek_prev().start_index;
         let end = self.peek_prev().end_index;
@@ -136,7 +136,7 @@ impl Parser {
         return Ok(NameTypePair { name, type_ });
     }
 
-    fn parse_args(&mut self, text: &str) -> Result<Vec<NTPOrType>, Error> {
+    fn parse_args(&mut self, text: &str) -> Result<Vec<NTPOrType>, ParseError> {
         self.eat(&[TokenType::OneChar('(')])?;
         let mut args: Vec<NTPOrType> = Vec::new();
         if self.do_match(&[TokenType::OneChar(')')]) {
@@ -153,7 +153,7 @@ impl Parser {
         Ok(args)
     }
 
-    pub fn parse_ntp_or_type(&mut self, text: &str) -> Result<NTPOrType, Error> {
+    pub fn parse_ntp_or_type(&mut self, text: &str) -> Result<NTPOrType, ParseError> {
         self.eat(&[TokenType::Identifier])?;
         let ntp_or_type = if self.peek().type_ == TokenType::OneChar(':') {
             self.backtrack();
@@ -167,7 +167,7 @@ impl Parser {
         Ok(ntp_or_type)
     }
 
-    pub fn parse(&mut self, text: &str) -> Result<(Repo<Span>, Repo<String>), Error> {
+    pub fn parse(&mut self, text: &str) -> Result<(Repo<Span>, Repo<String>), ParseError> {
         let mut replace_dest_repo: Repo<Span> = Repo::new();
         let mut replace_src_repo: Repo<String> = Repo::new();
         while !self.is_at_end() {

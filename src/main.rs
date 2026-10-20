@@ -1,4 +1,9 @@
 use c2c::cli::driver;
 fn main() {
-    driver();
+    match driver() {
+        Ok(_) => (),
+        Err(e) => {
+            println!("{}", e)
+        }
+    }
 }
