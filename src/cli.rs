@@ -22,6 +22,10 @@ fn parse_cli() -> (Flags, Vec<String>) {
     let args: Vec<String> = env::args().collect();
     let mut flags: Flags = Flags::default();
     let mut paths: Vec<String> = Vec::new();
+    if args.len() == 1 {
+        flags.is_help = true;
+        return (flags, paths);
+    }
     let mut it = args.into_iter().skip(1);
     while let Some(arg) = it.next() {
         match arg.as_str() {
@@ -49,8 +53,9 @@ fn print_usage() {
         "         --debug     : for debugging purposes.",
         "    -h | --help      : print this message.",
         "Args: ",
-        "    *.c2c : will be translated to *.c.",
-        "    *.c2h : will be translated to *.h.",
+        "    *.c2c     : will be translated to *.c.",
+        "    *.c2h     : will be translated to *.h.",
+        "    otherwise : will be translated to the fallback extension or *.c if not specified. ",
     ];
 
     for line in usage {
