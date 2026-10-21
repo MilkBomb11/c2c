@@ -2,5 +2,12 @@
 name = "c2c"
 version = "0.1.0"
 edition = "2024"
+exclude = ["tests/"]
+license = "MIT"
+description = "Colon type notation to C style type notation translator"
+readme = "README.md"
+license-file = "LICENSE"
+keywords = ["translator", "transpiler", "compiler", "notation", "type"]
+
 
 [dependencies]
