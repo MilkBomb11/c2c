@@ -1,0 +1,23 @@
+#include<stdlib.h>
+
+struct Stack {
+	[< top: ptr<struct Node> >];
+	[< size: int >];
+};
+
+struct Node {
+	[< next: ptr<struct Node> >];
+	[< val: int >];
+};
+
+[< stack_init: fn (stack: ptr<struct Stack>) -> void >] {
+	stack->top = NULL;
+	stack->size = 0;
+}
+
+[< stack_push: fn(stack: ptr<struct Stack>, val: int) -> void >] {
+	[< node: ptr<struct Node> >] = ([< ptr<struct Node> >])malloc(sizeof([<struct Node>]));
+	node->val = val;
+	node->next = stack->top;
+	stack->top = node;
+}

@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<stdint.h>
 #define BLAH
 
 typedef struct E {
@@ -7,9 +8,13 @@ typedef struct E {
 } E;
 // this is a comment
 
-typedef void **(*)(int , uint8 *y) hello
+typedef void **(*hello)(int , uint8_t *y);
 
-int (**x)[4]
+typedef int (*row)[5]; 
+
+struct map apply(int (*)(int , struct map *), struct map );
+
+int (**x)[MAXLEN];
 
 int main(int argc, char* argv[]) {
     printf("Hello world!\n");
@@ -19,7 +24,7 @@ int main(int argc, char* argv[]) {
 }
 static const int *x;
 static const struct x *zd;
-View (*arrx)[3] a
+View (*arrx)[3];
 
 const float f(int64 x, static int *velocity, struct hello z, int86 he, size_t hello);
 void **(*x)(struct y x());

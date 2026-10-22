@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<stdint.h>
 #define BLAH
 
 typedef struct E {
@@ -7,9 +8,13 @@ typedef struct E {
 } E;
 // this is a comment
 
-typedef [< ptr<fn (int, y: ptr<uint8>) -> ptr<ptr<void>>> >] hello
+typedef [<hello: ptr<fn (int, y: ptr<uint8_t>) -> ptr<ptr<void>>> >];
 
-[< x: ptr<ptr< arr<int, 4>>> >]
+typedef [<row: ptr<arr<int,5>> >]; 
+
+[< apply: fn (ptr<fn (int, ptr<struct map>) -> int>, struct map) -> struct map >];
+
+[< x: ptr<ptr< arr<int, MAXLEN>>> >];
 
 int main(int argc, char* argv[]) {
     printf("Hello world!\n");
@@ -19,7 +24,7 @@ int main(int argc, char* argv[]) {
 }
 [< x: static<const<ptr<int>>> >];
 [< zd: static<const<ptr<struct x>>> >];
-[<arrx: ptr<arr<View,3>>>] a
+[<arrx: ptr<arr<View,3>>>];
 
 [< f: fn (x: int64, velocity: static<ptr<int>>, z: struct hello, he: int86, hello: size_t) -> const<float> >];
 [<x: ptr < fn(x: fn () -> struct y ) -> ptr<ptr<void>> >>];
